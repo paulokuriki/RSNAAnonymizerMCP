@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "DicomMCP": {
+      "command": "C:\\\\Windows\\\\System32\\\\wsl.exe",
+      "args": [
+        "--distribution",
+        "Ubuntu",
+        "--",
+        "bash",
+        "-lc",
+        "cd '/mnt/c/Users/paulo/Python Projects/dicom-mcp' && uv run --with-editable '.' python -m dicom_mcp '/mnt/c/Users/paulo/Python Projects/dicom-mcp/configuration.yaml'"
+      ]
+    },
+    "AnonymizerMCP": {
+      "command": "C:\\\\Windows\\\\System32\\\\wsl.exe",
+      "args": [
+        "--distribution",
+        "Ubuntu",
+        "--",
+        "bash",
+        "-lc",
+        "cd '/mnt/c/Users/paulo/PycharmProjects/rsna anonymizer/anonymizer' && uv run python -m anonymizer_mcp.server --config anonymizer.mcp.yaml"
+      ]
+    }
+  },
+  "globalShortcut": "",
+  "preferences": {
+    "menuBarEnabled": false
+  }
+}
