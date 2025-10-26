@@ -1,4 +1,7 @@
 # RSNA DICOM Anonymizer V18.0
+[RSNAAnonymizerMCP](https://github.com/paulokuriki/RSNAAnonymizerMCP) is a fork of the official [RSNA anonymizer](https://github.com/RSNA/anonymizer) with a focused goal: provide a Model Context Protocol (MCP) wrapper that exposes the anonymizer headlessly to Claude/GPT-style clients.
+
+All MCP-specific code lives under `src/anonymizer_mcp/`, adds a FastMCP server entry point (`python -m anonymizer_mcp.server`), and documents the workflow in `claude.md`. Everything else in this README and repo mirrors the upstream project for parity, so you can still follow the original installation, GUI usage, and development instructions below.
 [![de](https://img.shields.io/badge/lang-de-blue.svg)](readme.de.md)
 [![es](https://img.shields.io/badge/lang-es-blue.svg)](readme.es.md)
 [![fr](https://img.shields.io/badge/lang-fr-blue.svg)](readme.fr.md)
