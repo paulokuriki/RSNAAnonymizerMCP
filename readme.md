@@ -1,75 +1,83 @@
-# RSNA DICOM Anonymizer V18.0
-[RSNAAnonymizerMCP](https://github.com/paulokuriki/RSNAAnonymizerMCP) is a fork of the official [RSNA anonymizer](https://github.com/RSNA/anonymizer) with a focused goal: provide a Model Context Protocol (MCP) wrapper that exposes the anonymizer headlessly to Claude/GPT-style clients.
+# RSNAAnonymizerMCP
 
-All MCP-specific code lives under `src/anonymizer_mcp/`, adds a FastMCP server entry point (`python -m anonymizer_mcp.server`), and documents the workflow in `claude.md`. Everything else in this README and repo mirrors the upstream project for parity, so you can still follow the original installation, GUI usage, and development instructions below.
-[![de](https://img.shields.io/badge/lang-de-blue.svg)](readme.de.md)
-[![es](https://img.shields.io/badge/lang-es-blue.svg)](readme.es.md)
-[![fr](https://img.shields.io/badge/lang-fr-blue.svg)](readme.fr.md)
-[![Tests](https://github.com/RSNA/anonymizer/actions/workflows/tests.yaml/badge.svg)](https://github.com/RSNA/anonymizer/actions/workflows/tests.yaml)
+**RSNAAnonymizerMCP** is a thin Model Context Protocol (MCP) wrapper around the official [RSNA DICOM Anonymizer](https://github.com/RSNA/anonymizer). Instead of launching the GUI, this fork exposes the anonymizer headlessly to Claude, GPT, or any MCP client.
 
-## Install Python with tkinter (GUI library)
-### Windows
-1. Download Python 3.12 from [python.org](https://www.python.org/downloads/) (pytorch does not currently support 3.13)
-2. Run installer
-   - Select "Add python.exe to PATH"
-   - Enable "tcl/tk and IDLE"
-### macOS
-1. Install Homebrew if not present: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'
-2. Install Python 3.12 with Tcl/Tk:
+- MCP server lives in `src/anonymizer_mcp/` and is powered by [FastMCP](https://github.com/modelcontextprotocol/python-sdk).
+- All workflow notes for Claude/Desktop agents live in `claude.md`.
+- The original RSNA GUI code is left untouched so we can stay in sync with upstream when needed.
+
+> Need the GUI? Use the upstream repository. Need an MCP tool? Stay here.
+
+## Requirements
+
+- Python **3.12** (matching upstream requirements)
+- `uv` or `poetry` for dependency management (examples below use `uv`)
+- Access to local DICOM downloads (the anonymizer runs over files you already have)
+
+## Quick start
+
+```bash
+git clone https://github.com/paulokuriki/RSNAAnonymizerMCP.git
+cd "RSNAAnonymizerMCP/anonymizer"
+uv sync              # creates .venv and installs runtime deps
+uv run python -m anonymizer_mcp.server --config anonymizer.mcp.yaml
 ```
-brew install python@3.12
-brew install tcl-tk
+
+The server listens on stdin/stdout (MCP `stdio` transport) and exposes the `status` and `anonymize_now` tools. Claude Desktop, Cursor, or any MCP client can now talk to it.
+
+## Configuration
+
+Create `anonymizer.mcp.yaml` (sample already checked in) to point at your download/output folders:
+
+```yaml
+paths:
+  input_dir: "./data/downloads"
+  output_dir: "./data/anonymized"
+  quarantine_dir: "./data/anonymized/private/quarantine"
+  temp_dir: "./data/tmp"
+
+processing:
+  recursive_scan: true
+  remove_pixel_phi: false
+  anonymizer_script_path: "src/anonymizer/assets/scripts/default-anonymizer.script"
+
+identity:
+  site_id: "123456"
+  uid_root: "1.2.840.113619"
+
+logging:
+  level: "INFO"
+
+limits:
+  max_concurrent_files: 50
 ```
-### Linux (Ubuntu/Debian)
-1. Install the required packages:
+
+The wrapper lazily instantiates the heavy RSNA controller, so startup stays fast even on large configs. Individual tool calls trigger file scans and anonymization runs.
+
+## Claude Desktop setup
+
+`claude.desktop.json` contains a ready-to-import configuration that launches this server from Claude Desktop alongside the original DICOM MCP. Import it via **Claude Desktop → Settings → Advanced → Open config file** and merge as needed.
+
+Key command:
+
+```json
+"bash", "-lc",
+"cd '/mnt/c/Users/paulo/PycharmProjects/rsna anonymizer/anonymizer' && uv run python -m anonymizer_mcp.server --config anonymizer.mcp.yaml"
 ```
-sudo apt update
-sudo apt install software-properties-common
-sudo add-apt-repository ppa:deadsnakes/ppa
-sudo apt install python3.12 python3.12-tk
-```
-## Verify Installation
-```
-python --version
-python -m tkinter
-```
-If python + tkinter has been installed successfully a small GUI window should open
-## Install rsna-anonymizer package from PyPI
-`pip install rsna-anonymizer`
-## Execution
-`rsna-anonymizer`
-### Headless Mode
-You need to provide a path to a project configuration to run in headless mode
-`rsna-anonymizer -c path/to/ProjectModel.json`
-## Upgrading
-`pip install --upgrade rsna-anonymizer`
-## Documentation
-[Help files](https://rsna.github.io/anonymizer)
+
+See `claude.md` for full agent context and maintenance rules.
+
 ## Development
-### Setup
-1. Setup python environment (>3.10) which includes Tkinter, recommend using pyenv with MacOS & Linux
-2. Ensure python is installed with Tkinter: `python -m tkinter`, a small GUI window should open
-3. Install poetry: `pip install poetry`
-4. Set virtual environment within project: `poetry config virtualenvs.in-project true`
-4. Clone repository
-5. Setup virtual environment and install all dependencies listed in pyproject.toml: `poetry install --with dev`
-### Unit Testing 
-#### For model and controller with coverage
-```
-1. Create tests/controller/.env file with your AWS_USERNAME and AWS_PASSWORD
-2. poetry run pytest
-```
-### Translations
-Languages for 17.3: `en_US, de, es, fr`
-#### Ensure gettext is installed:
-1. Windows: [Install instructions](https://mlocati.github.io/articles/gettext-iconv-windows.html) or `choco install gettext`
-2. Mac OSX: `brew install gettext`
-3. Linux: `sudo apt-get install gettext`
-#### Extracting messages from source files:
-cd src/anonymizer/assets/locales/
-./extract_translations.sh
-#### Updating translations:
-cd src/anonymizer/assets/locales/
-./update_translations.sh
-### Software Architecture
-Full class diagram on github [here](class_diagram.md)
+
+The MCP wrapper lives entirely in `src/anonymizer_mcp/`. Typical workflow:
+
+1. Create/edit `anonymizer.mcp.yaml` for your paths.
+2. `uv run python -m anonymizer_mcp.server --config anonymizer.mcp.yaml` to run the server.
+3. Use `uv run pytest` (or upstream’s `poetry run pytest`) if you need to exercise anonymizer internals.
+4. Keep `claude.md` in sync whenever you change behavior so future agents inherit the same context.
+
+We track upstream RSNA changes via the `upstream` remote (`https://github.com/RSNA/anonymizer.git`). Rebase or cherry-pick as needed, but keep MCP-specific logic isolated to the new package.
+
+## Licensing
+
+Same as upstream: RSNA-MIRC Public License. See `LICENSE` for details.
